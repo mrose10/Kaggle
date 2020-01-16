@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Feb 12 07:50:21 2019
+
+@author: maureenkeenan
+"""
+
+import pandas as pd
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeRegressor
+import seaborn as sns
+
+
+# Read in data
+filepath = '/Users/maureenkeenan/Desktop/Kaggle_Titanic'
+file_train = 'train.csv'
+sample = pd.read_csv(os.path.join(filepath,file_train))
+
+# Explore data
+sample.describe()
+sample.columns
+y = sample.Survived # What we are fitting for
+sample.groupby('Survived').Survived.count()
+
+#
+# Before selecting features go through each one and turn it into useful data
+#
+
+# Pclass - Can be 3 values, 1 2 or 3
+a = sample[sample.Survived==0].groupby('Pclass').count()
+b = sample[sample.Survived==1].groupby('Pclass').count()
+c = sample.groupby(['Pclass','Survived']).count()
+
+ind = np.arange(3)+1
+width = 0.2
+
+p1 = plt.bar(ind,a.PassengerId,width,label = 'Died')
+p2 = plt.bar(ind+width,b.PassengerId,width,label = 'Survived')
+
+plt.xlabel('Pclass')
+plt.ylabel('Number of Passengers')
+plt.title('Survival by Cabin')
+plt.xticks(ind + width, ind)
+plt.legend()
+
+plt.show()
+
+## OR THE EASY WAY 
+sns.barplot(x="Embarked",y="Survived", hue = "Sex", data = sample)
+
+# Name, has a title
+def get_title(sample):
+    title = []
+    for i in range(len(sample.Name)):
+        tmp = sample.Name[i].split(',')
+        title.append(tmp[-1].split('.')[0]) #or to combine use regexp and search
+    sample['Title'] = title
+    return sample
+#unique_titles = list(set(title))
+#sample.groupby('Title').Title.count()
+#f[df['model'].str.match('Mac')]
+#
+#D = sample[sample.Survived==0].groupby('Title').count()
+#S = sample[sample.Survived==1].groupby('Title').count()
+#Died = pd.DataFrame(list(zip(list(D.index),D.Survived.values)), columns = ['Title','Died'])
+#Survived = pd.DataFrame(list(zip(list(S.index),S.Survived.values)), columns = ['Title','Survived'])
+#SbT = pd.merge(Died,Survived, how = 'outer')
+#SbT['Total'] = SbT.sum(axis=1)
+#
+#ind = np.arange(len(SbT))+1
+#width = 0.2
+#
+#p1 = plt.bar(ind,SbT.Died/SbT.Total,width,label = 'Died')
+#p2 = plt.bar(ind+width,SbT.Survived/SbT.Total,width,label = 'Survived')
+#
+#plt.xlabel('Title')
+#plt.ylabel('Number of Passengers')
+#plt.title('Survival by Title')
+#plt.xticks(ind, SbT.Title)
+#plt.legend
+#
+#plt.show()
+#
+##
+#sample_features = ['Pclass','Age','Fare']
+#X = sample[sample_features]
+
+# Group continuous data to prevent overfitting
+def simplify_ages(sample):
+    sample.Age = sample.Age.fillna(-0.5)
+    bins = (-1, 0, 5, 12 , 18, 25, 35 , 60, 100)
+    group_names = ['Unknown', 'Baby', 'Child', 'Teenager', 'Student', 'Young Adult', 'Adult', 'Senior']
+    categories = pd.cut(sample.Age, bins, labels=group_names) #puts things in bins, this is great
+    sample.Age = categories
+    return sample
+sns.barplot(x='Age',y = 'Survived', hue = 'Sex',data = sample)
+
+def simplify_cabins(sample):
+    sample.Cabin = sample.Cabin.fillna('N')
+    sample.Cabin = sample.Cabin.apply(lambda s: s[0])
+    return sample
+simplify_cabins(sample)
+plt.figure()
+sns.barplot(x='Cabin',y='Survived',data = sample)
+
+def simplify_fare(sample):
+    sample.Fare.fillna(-0.5)
+    bins = (-1,0,8,15,31,550) #Picked from describe values
+    group_names = ['Unknown','1st','2nd','3rd','4th']
+    categories = pd.cut(sample.Fare,bins,labels = group_names)
+    sample.Fare = categories
+    return sample
+simplify_fare(sample)
+plt.figure()
+sns.barplot(x='Fare',y='Survived',data = sample)

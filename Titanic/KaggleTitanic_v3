@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Feb 12 07:50:21 2019
+
+@author: maureenkeenan
+"""
+
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+from sklearn import preprocessing 
+import seaborn as sns
+
+
+# Read in data
+filepath = '/Users/maureenkeenan/Desktop/Kaggle_Titanic'
+file_train = 'train.csv'
+file_test = 'test.csv'
+sample = pd.read_csv(os.path.join(filepath,file_train))
+data = pd.read_csv(os.path.join(filepath,file_test))
+
+# Explore data
+sample.describe()
+sample.columns
+y = sample.Survived # What we are fitting for
+sample.groupby('Survived').Survived.count()
+
+#
+# Before selecting features go through each one and turn it into useful data
+# Pclass - Can be 3 values, 1 2 or 3
+## OR THE EASY WAY 
+sns.barplot(x="Pclass",y="Survived", hue = "Sex", data = sample)
+
+# Name, has a title
+def get_title(sample):
+    title = []
+    for i in range(len(sample.Name)):
+        tmp = sample.Name[i].split(',')
+        title.append(tmp[-1].split('.')[0]) #or to combine use regexp and search
+    sample['Title'] = title
+    return sample
+get_title(sample)
+
+def transform_sex(df):
+    for i in range(len(df.Sex)):
+        if df.Age[i] < 8:
+            df.Sex[i] = 'child'
+    return df
+transform_sex(sample)
+
+# Group continuous data to prevent overfitting
+def simplify_ages(sample):
+    sample.Age = sample.Age.fillna(-0.5)
+    bins = (-1, 0, 5, 12 , 18, 25, 35 , 60, 100)
+    group_names = ['Unknown', 'Baby', 'Child', 'Teenager', 'Student', 'Young Adult', 'Adult', 'Senior']
+    categories = pd.cut(sample.Age, bins, labels=group_names) #puts things in bins, this is great
+    sample.Age = categories
+    return sample
+simplify_ages(sample)
+sns.barplot(x='Age',y = 'Survived', hue = 'Sex',data = sample)
+
+def simplify_cabins(sample):
+    sample.Cabin = sample.Cabin.fillna('N')
+    sample.Cabin = sample.Cabin.apply(lambda s: s[0])
+    return sample
+simplify_cabins(sample)
+plt.figure()
+sns.barplot(x='Cabin',y='Survived',data = sample)
+
+def simplify_fare(df):
+    df.Fare = df.Fare.fillna(df.Fare.median())
+    df.Fare.astype(int)
+    bins = (-1,0,8,15,31,1000) #Picked from describe values
+    group_names = ['Unknown','First','Second','Third','Fourth']
+    categories = pd.cut(df.Fare,bins,labels = group_names)
+    df.Fare = categories
+    return df
+simplify_fare(sample)
+plt.figure()
+sns.barplot(x='Fare',y='Survived',data = sample)
+
+
+
+def transform_features(df):
+    get_title(df)
+    transform_sex(df)
+    simplify_ages(df)
+    simplify_cabins(df)
+    simplify_fare(df)
+   
+    return df
+
+data = transform_features(data)
+features = ['Sex','Fare','Cabin','Pclass','Title','Parch']
+X_train = sample[features]
+X_test = data[features]
+y = sample.Survived
+
+
+#Variables should be numerical and standardized for ML algorithms
+def encode_features(X_test, X_train):
+    features = ['Sex','Fare','Cabin','Title']
+    X_combined = pd.concat([X_test[features],X_train[features]])
+    
+    for feature in features:
+        le = preprocessing.LabelEncoder()
+        le = le.fit(X_combined[feature].astype('category'))
+        X_test[feature] = le.transform(X_test[feature])
+        X_train[feature] = le.transform(X_train[feature])
+    return X_test, X_train
+
+X_test, X_train = encode_features(X_test,X_train)
+
+
+# OK now split the training set into 2 smaller training sets 
+# 80% to split again, 20% to validate against
+from sklearn.model_selection import train_test_split
+
+num_test = 0.20
+data_train, data_test, y_train, y_test = train_test_split(X_train,y,test_size = num_test)
+
+# Set up the Classification Algorithm
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import make_scorer, accuracy_score
+from sklearn.model_selection import GridSearchCV
+
+# Choose thet ype of classifier
+clf = RandomForestClassifier()
+
+# Choose some parameter combinations to try
+parameters = {'n_estimators': [4, 6, 9], 
+              'max_features': ['log2', 'sqrt','auto'], 
+              'criterion': ['entropy', 'gini'],
+              'max_depth': [2, 3, 5, 10], 
+              'min_samples_split': [2, 3, 5],
+              'min_samples_leaf': [1,5,8]
+             }
+
+# Type of scoring used to compare parameter combinations
+acc_scorer = make_scorer(accuracy_score)
+
+# Run the grid search
+grid_obj = GridSearchCV(clf, parameters, scoring=acc_scorer)
+grid_obj = grid_obj.fit(data_train, y_train)
+
+# Set the clf to the best combination of parameters
+#clf = grid_obj.best_estimator_
+
+# Fit the best algorithm to the data. 
+clf.fit(data_train, y_train)
+
+predictions = clf.predict(data_test)
+print(accuracy_score(y_test, predictions))
+
+import xgboost as xgb
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+gbm = xgb.XGBClassifier(max_depth=10, n_estimators=100, learning_rate=0.05).fit(data_train, y_train)
+predictions = gbm.predict(data_test)
+print(accuracy_score(y_test, predictions))
+
+
+ids = data['PassengerId']
+predictions = clf.predict(X_test)
+
+output = pd.DataFrame({ 'PassengerId' : ids, 'Survived': predictions })
+output.to_csv('titanic-predictions.csv', index = False)
+output.head()
+
+
+
+
+
+
