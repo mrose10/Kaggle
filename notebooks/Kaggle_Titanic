@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+import pandas as pd
+import os
+
+filepath = '/Users/maureenkeenan/Desktop/Kaggle_Titanic'
+file_train = 'train.csv'
+
+
+sample = pd.read_csv(os.path.join(filepath,file_train))
+
