@@ -1,7 +1,5 @@
-<h3> Titanic </h3>
-<h4> Hello, Data Science World! </h4>
+<h3> The Classic Kaggle Titanic </h3>
 
-The classic Kaggle Titanic dataset. 
-
+**Hello, Data Science World!**
 My goal with this set is to become familiar with Forest Classifiers and compare methods. 
 
