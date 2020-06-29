@@ -2,5 +2,5 @@
 
 **Hello, Data Science World!**
 <br/>
-My goal with this set is to become familiar with Forest Classifiers and compare methods. 
+My goal with this set is to compare different models for Decision Tree and Random Forests. 
 
