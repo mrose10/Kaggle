@@ -2,5 +2,9 @@
 
 **Hello, Data Science World!**
 <br/>
-My goal with this set is to compare different models for Decision Tree and Random Forests. 
+My goal with this set is to compare different models, specifically Logistic Regression, with and without Regularizaton and Decision Tree and Random Forests. 
+
+![GitHub Logo](/data/BoxplotAccuracy.png)
+
+
 
